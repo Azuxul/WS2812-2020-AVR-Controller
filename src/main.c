@@ -2,37 +2,21 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
-#define LED_NUMBER 1
+#define LED_NUMBER 2  // THE NUMBER OF LEDS SHOUD BE EQUAL TO THE REAL NUMBER OF LEDS OTHERWISE THE WRONG COLORS WILL BE DSIPLAYED 
 
 volatile uint8_t colors[LED_NUMBER][3];
 
-volatile uint8_t led = 0;
-volatile uint8_t ledByte = 0;
-volatile uint8_t bit = 0;
+uint8_t ledPinPort = _SFR_IO_ADDR(PORTD);
+uint8_t ledPinBit = 3;
 
-ISR(TIMER1_OVF_vect)
+// Update WS2812-2020 LEDs colors, max LEDs per line : 85 
+// Target CPU frequency : 16MHz
+void updateLedASM(uint8_t port, uint8_t pinBit, uint8_t colorsArray[][3], uint8_t size)
 {
 
-  ICR1 = 0x00FF;
-
-  if ((colors[led][ledByte] >> bit++) & 1)
-  {
-    OCR1A = 10;
-  }
-  else
-  {
-    OCR1A = 6;
-  }
-
-}
-
-// LSB of each color byte shoud be 0 (otherwise there is timing issue)
-/* void updateLedASM(uint8_t port, uint8_t pinBit, volatile uint8_t colorsArray[][3], uint8_t size)
-{
-
-  uint8_t counter = 0;
-  uint8_t bitCounter = 0;
-  size = size * 3 + 1;
+  volatile uint8_t counter = 0;
+  volatile uint8_t bitCounter = 0;
+  size = size * 3;
 
   PORTD &= 1 << 3;
 
@@ -40,34 +24,144 @@ ISR(TIMER1_OVF_vect)
       "cbi %2, %3 \n\t"
       "ldi %0, %4 \n"
     "tx_led_data%=: \n\t"
-      "dec %0 \n\t"
-    "tx_led_byte%=: \n\t"
-      "ldi %1, 0x08 \n\t"
-      "ld __tmp_reg__, %a5+ \n\t"
-    "tx_led_bit%=: \n\t"
-      "breq tx_led_data_end%=\n\t"
+
       "sbi %2, %3 \n\t"
+      "ld __tmp_reg__, %a5+ \n\t" 
       "lsl __tmp_reg__ \n\t"
-      "brcc set_pin_low%= \n\t"
-      "nop \n\t"
-      "nop \n\t"
-      "nop \n\t"
-      "nop \n\t"
-      "dec %1 \n\t"
-      "rjmp tx_led_bit_end%=\n"
-    "set_pin_low%=: \n\t"
+      "brcs .+4 \n\t"
       "cbi %2, %3 \n\t"
-      "dec %1 \n\t"
+      "brcc .+7 \n\t"
       "nop \n\t"
-      "nop \n"
-    "tx_led_bit_end%=:"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
       "cbi %2, %3 \n\t"
-      "breq tx_led_data%= \n\t"
       "nop \n\t"
-      "brne tx_led_bit%= \n"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+
+      "sbi %2, %3 \n\t"
+      "nop \n\t"
+      "lsl __tmp_reg__ \n\t"
+      "brcs .+4 \n\t"
+      "cbi %2, %3 \n\t"
+      "brcc .+8 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "cbi %2, %3 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+
+      "sbi %2, %3 \n\t"
+      "nop \n\t"
+      "lsl __tmp_reg__ \n\t"
+      "brcs .+4 \n\t"
+      "cbi %2, %3 \n\t"
+      "brcc .+8 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "cbi %2, %3 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+
+      "sbi %2, %3 \n\t"
+      "nop \n\t"
+      "lsl __tmp_reg__ \n\t"
+      "brcs .+4 \n\t"
+      "cbi %2, %3 \n\t"
+      "brcc .+8 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "cbi %2, %3 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+
+      "sbi %2, %3 \n\t"
+      "nop \n\t"
+      "lsl __tmp_reg__ \n\t"
+      "brcs .+4 \n\t"
+      "cbi %2, %3 \n\t"
+      "brcc .+8 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "cbi %2, %3 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+
+      "sbi %2, %3 \n\t"
+      "nop \n\t"
+      "lsl __tmp_reg__ \n\t"
+      "brcs .+4 \n\t"
+      "cbi %2, %3 \n\t"
+      "brcc .+8 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "cbi %2, %3 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+
+      "sbi %2, %3 \n\t"
+      "nop \n\t"
+      "lsl __tmp_reg__ \n\t"
+      "brcs .+4 \n\t"
+      "cbi %2, %3 \n\t"
+      "brcc .+8 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "cbi %2, %3 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+
+      "sbi %2, %3 \n\t"
+      "nop \n\t"
+      "lsl __tmp_reg__ \n\t"
+      "brcs .+4 \n\t"
+      "cbi %2, %3 \n\t"
+      "brcc .+8 \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "nop \n\t"
+      "cbi %2, %3 \n\t"
+
+      "dec %0 \n\t"
+      "breq tx_led_data_end%=\n\t"
+      "rjmp tx_led_data%=\n\t"
     "tx_led_data_end%=:\n\t"
-      "clr %5"
-      //"sbi %2, %3 \n\t"
+      "clr %5 \n\t"
+      "cbi %2, %3 \n\t"
 
       : "=&r"(counter),
         "=&r"(bitCounter)
@@ -75,52 +169,26 @@ ISR(TIMER1_OVF_vect)
         "I"(pinBit),
         "I"(size),
         "b"(colorsArray));
-} */
+}
 
 int main(void)
 {
 
-  colors[0][0] = 0xFF;
-  colors[0][1] = 0b10000100;
-  colors[0][2] = 0b10010000;
+  colors[0][0] = 0b00000000;
+  colors[0][1] = 0b00000000;
+  colors[0][2] = 0b11111111; 
+  colors[1][0] = 0b00000000;
+  colors[1][1] = 0b11111111;
+  colors[1][2] = 0b00001111; 
 
-  sei();
-
-  TCNT1 = 0;           //Initialize Timer 1 counter
-  DDRB |= (1 << DDB1); //PB1 is an output
-  DDRB |= (1 << DDB1); // PB1 is set as an output
-
-  ICR1 = 0x0FFF; // set PWM counter TOP
-
-  OCR1A = 0x0000; // set 0% PWM dutty cycle
-
-  TCCR1A |= (1 << COM1A1) | (1 << COM1B1); // set non inverting mode
-
-  TCCR1A |= (1 << WGM11);
-  TCCR1B |= (1 << WGM12) | (1 << WGM13);
-  // set Fast PWM mode using ICR1 as TOP
-
-  TCCR1B |= (1 << CS10);  // start timer with no prescaler
-  TIMSK1 |= (1 << TOIE1); // set intreup on timer overflow
-
+  DDRD = 1 << 3;
 
   for (;;)
   {
+    updateLedASM(ledPinPort, ledPinBit, colors, LED_NUMBER);
 
-    // rester leds status counters
-    if (bit > 7)
-      {
-        bit = 0;
-        if (++led > 2)
-        {
-          ledByte = 0;
-          if (++led >= LED_NUMBER)
-          {
-            led = 0;
-            ICR1 = 0xFFFF;
-          }
-        }
-      }
+    _delay_ms(1);
+    
   }
 
   return 0;
